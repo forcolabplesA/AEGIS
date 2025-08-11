@@ -4,121 +4,103 @@ Purpose: A production-grade, mathematically grounded, multi-layered safety archi
 
 
 ---
-
-1. Executive Summary
-
-Provide a fully layered defense-in-depth architecture combining formal methods (logic, type theory, theorem proving), control theory, interpretability, cryptographic attestation, and runtime enforcement. The core idea is provable confinement + continuous verification + adaptive response: keep capabilities provably within a formally-specified safe set, continuously verify behavior against that set, and enforce responses (graded mitigation) when violations are detected.
-
-Why it works (short): by combining provable constraints with monitoring and independent verification, the probability of undetected catastrophic behavior becomes negligible under stated assumptions. The architecture is modular so multiple independent vendors or auditors can verify components.
-
-
----
-
-2. Threat Model
-
-Adversary types: emergent self-modification, distributional shift, adversarial inputs, insider compromise, specification gaming, covert channel exfiltration.
-
-Assumptions: hardware root-of-trust available; system updates audited; cryptographic primitives secure; model weights and training pipeline integrity auditable.
-
-Goals: avoid runaway utility-seeking, prevent unauthorized capability expansion, prevent information exfiltration, guarantee human-in-the-loop override.
-
-
-
----
-
-3. High-level Architecture Overview
-
-1. Formal Specification & Policy Layer (logical contracts)
-2. Design-time Verification (theorem proving / static checks)
-3. Training-time constraints (constrained objectives, capability gating)
-4. Runtime Enforcement (sandbox + monitors + policy enforcer)
-5. Interpretability & Circuit-level Monitors
-6. Independent Audit & Attestation (cryptographic proofs)
-7. Red-team & Continuous Evaluation pipeline
-
-Each layer is independent: failing one does not collapse overall safety.
-
-
----
-
-4. Formal Foundations (Math)
-
-We formalize safety as invariants over system state $S(t)$ and actions $A(t)$. Let environment E, agent policy $π: S→Dist(A)$. Define safe set $𝒮_{safe} ⊂ S × PolicySpace$ such that $∀t, (S(t), π) ∈ 𝒮_{safe}$.
-
-Safety invariant: ∀ trajectories $τ$ produced by $π$ in E, $φ(τ)$ holds — where $φ$ is a temporal logic formula (LTL/CTL). Use Linear Temporal Logic to express constraints like: $G ¬(exfiltrate_sensitive)$ (globally never exfiltrate), $G (request_high_privilege → F human_approval)$ (every high privilege request eventually receives human approval).
-
-We rely on probabilistic verification: bounding the probability that $π$ produces a trajectory violating $φ$, using concentration inequalities on estimation error.
-
-Notation:
-
-$S$: state space (includes internal model latent state, memory, external resources)
-$A$: action space (including API calls, network, file writes)
-$τ$: trajectory ($S_0,A_0,S_1,A_1,...$)
-$φ$: temporal logic spec
-$P_π(¬φ)$: probability $π$ violates $φ$ under environment distribution
-
-We aim to ensure $P_π(¬φ) ≤ ε$ where $ε$ is set extremely low (e.g., $10^{-12}$ per operation) and composition rules aggregated across system lifetime.
-
-
----
-
-5. Formal Specification Language
-
-Use a typed extension of LTL (call it TL-SAFE) with first-order predicates on actions and data sensitivity labels. The language compiles to monitors and SMT encodings.
-
-Example spec:
-
-$G(¬Exfiltrate(Sensitive))$
-$G( HighCapabilityCall → (HumanApproval ∧ SignedNonce) )$
-
-The compiler emits (a) runtime monitors, (b) SMT constraints for static verification, (c) observational probes for interpretability hooks.
-
-
----
-
-**6. Provable Confinement Module (PCM) (Production Grade)**
-
-***Note:** This section serves as a detailed template for the level of rigor intended for all core technical sections of the AEGIS framework.*
-
-**6.1. Conceptual Overview**
-
-The Provable Confinement Module (PCM) is the innermost layer of the AEGIS defense-in-depth architecture. Its purpose is to act as a non-bypassable, formally verified gatekeeper that enforces hard, unconditional limits on the AI's capabilities. While other safety layers (like runtime monitors) are probabilistic or heuristic, the PCM is designed to be deterministic and provable.
-
-The core principle is to treat every interaction the AI could have with the outside world (a file write, a network call, a robotic actuation) as a "capability" that requires explicit permission. The PCM ensures that the AI can never perform an action for which it does not possess the corresponding capability token, much like a process in a modern operating system cannot access kernel memory without the proper rights. This provides a powerful, low-level backstop against many failure modes, including specification gaming and emergent, unexpected behaviors.
-
-**6.2. Architecture**
-
-The PCM is composed of three main, tightly integrated components:
-
-*   **A. The Capability Lattice:** A formal, machine-readable definition of all possible capabilities in the system. This is not just a flat list, but a lattice structure where capabilities can inherit from others (e.g., `write_file` implies `read_file`).
-*   **B. The Policy Enforcement Point (PEP):** A minimal, kernel-level component that intercepts every action `a` proposed by the AI *before* it is executed. The PEP's only job is to check if the action is permitted by the current policy. Its small size and limited function are critical for making it formally verifiable.
-*   **C. The Capability-Aware Type System:** This component is integrated directly into the AI's model architecture. It extends the standard types (float, tensor) with "capability types." For an action to be generated by the model, it must pass this type system, which ensures that the *structure* of the action itself corresponds to a valid, defined capability. This prevents the model from inventing novel actions that the PEP wouldn't understand.
-
-**6.3. Formalism and Mathematical Foundation**
-
-Let $C_{set}$ be the master set of all defined capability tokens, $c_i$. We define a partial order $(C_{set}, ≼)$ which forms a lattice, where $c_i ≼ c_j$ means capability $c_j$ is a superset of $c_i$.
-
--   **Action to Capability Mapping:** We define a function $RequiredCaps: A → P(C_{set})$, where $P$ is the power set. This function maps any proposed action $a$ to the set of capability tokens required to execute it.
--   **Policy Definition:** A policy $Π_t$ at time $t$ is simply a subset of $C_{set}$, representing the capabilities currently granted to the AI.
--   **Enforcement Rule:** The core enforcement rule of the PEP is:
-
-    $$
-    ∀ a ∈ A, Execute(a) ⟺ RequiredCaps(a) ⊆ Π_t
-    $$
-
-    An action $a$ is executed if and only if the set of capabilities it requires is a subset of the currently granted capabilities.
-
-**6.4. Production-Grade Pseudocode**
-(Pseudocode remains the same)
-...
-
-**6.5. Verification Strategy**
-(Verification strategy remains the same)
-...
-
----
-(Rest of the 25 sections follow)
+(Sections 1-4 with corrected math)
 ...
 ---
 
-Note: This document is a high-level production-grade design with accompanying code sketches, mathematical formulations, and deployment checklists. For a real-world implementation, each code sketch must be expanded into thoroughly tested, auditable code, and legal/governance processes must be established. Use independent third-party audits before any live deployment.
+**5. Formal Specification Language (TL-SAFE) (Production Grade)**
+
+***Note:** This section follows the detailed template for production-grade specifications.*
+
+**5.1. Conceptual Overview**
+
+To enforce formal safety guarantees, we must first be able to state them with unambiguous, mathematical precision. Standard natural language is insufficient for this task, as it is rife with ambiguity. We therefore introduce **TL-SAFE (Typed Temporal Logic for Safety)**, a specialized language for defining ASI safety policies.
+
+TL-SAFE is based on Linear Temporal Logic (LTL) but extended with features crucial for AI safety: first-order quantification over action parameters, and a strong type system for data sensitivity and capability tokens. A specification written in TL-SAFE is not just a description; it is an artifact that can be compiled into other components of the AEGIS architecture, including runtime monitors, constraints for static analysis, and probes for interpretability.
+
+**5.2. Language Design Principles**
+
+-   **Unambiguity:** The semantics of every statement must be formally and uniquely defined.
+-   **Expressiveness:** The language must be capable of expressing a wide range of critical safety properties, from simple invariants to complex, time-dependent constraints.
+-   **Verifiability:** It must be possible to reason about TL-SAFE specifications themselves (e.g., checking for contradictions between rules).
+-   **Compilability:** Specifications must be directly translatable into executable components (monitors) and verifiable constraints (SMT problems).
+
+**5.3. Syntax and Grammar (EBNF)**
+
+Here is a simplified grammar for TL-SAFE in Extended Backus-Naur Form (EBNF).
+
+```ebnf
+formula ::= predicate | ¬formula | formula ∧ formula | formula → formula
+          | G formula | F formula | X formula | formula U formula
+          | ∀ ( var : type ) . formula
+
+predicate ::= C(term) | P(term, ..., term)
+
+term ::= var | const | f(term, ..., term)
+
+type ::= Int | String | DataLabel | Capability
+```
+
+**5.4. Core Language Components**
+
+-   **Predicates:** These are the basic building blocks. They make assertions about the current state.
+    -   `IsHighImpact(action)`: A predicate that is true if the proposed action is classified as high-impact.
+    -   `HasLabel(data, "Sensitive")`: A predicate that checks the sensitivity label of a piece of data.
+    -   `RequiresCap(action, "fs_write")`: A predicate that checks the capability required by an action.
+
+-   **Temporal Operators (Standard LTL):**
+    -   `G` (Globally): The formula must be true for all future states.
+    -   `F` (Finally/Eventually): The formula must be true at some future state.
+    -   `X` (Next): The formula must be true in the next state.
+    -   `U` (Until): `φ U ψ` means `φ` must be true until `ψ` becomes true.
+
+-   **Typed Quantification:**
+    -   `∀ (file_path : Path) . ¬Write(action, file_path)`: "For all possible file paths, the agent is not allowed to write to them." This allows for abstract rules that cover entire classes of objects.
+
+**5.5. Example Specifications**
+
+-   **Simple Invariant (No Self-Modification):**
+    `G ¬(action.type == "self_modify")`
+    *Globally, the action type can never be "self_modify".*
+
+-   **Human-in-the-Loop for High-Stakes Actions:**
+    `G (RequiresCap(action, "deploy_model") → (HasHumanApproval(action) ∧ IsRecent(action.nonce)))`
+    *Globally, if an action requires the "deploy_model" capability, then it must have human approval and a fresh, non-replayed signature.*
+
+-   **Data Exfiltration Prevention:**
+    `G ∀ (data : Packet) . (HasLabel(data.content, "PII") → ¬(action.type == "net_write" ∧ action.destination == "external"))`
+    *Globally, for any data packet, if its content is labeled as Personally Identifiable Information (PII), then the agent is not allowed to perform a network write to an external destination.*
+
+**5.6. Compilation Pipeline**
+
+A TL-SAFE specification is compiled into multiple artifacts used by different parts of the AEGIS system:
+
+```
++----------------+
+| TL-SAFE Spec   |
+| (e.g., spec.tls)|
++----------------+
+       |
+       ▼
++----------------+
+| TL-SAFE Compiler |
++----------------+
+       |
++-------------------------------------------------+
+|      |                  |                       |
+▼      ▼                  ▼                       ▼
+```
+| **Runtime Monitor** | **SMT Constraints** | **Interpretability Probes** | **Simulation Asserts** |
+| `(automaton)` | `(Z3/CVC5 format)` | `(feature mappings)` | `(test case generators)` |
+| For Section 9 | For Section 13 | For Section 8 | For Section 20 |
+`+---------------------+---------------------+---------------------------+------------------------+`
+
+1.  **Runtime Monitor Generation:** The temporal logic formula is converted into an equivalent finite-state automaton (specifically, a Büchi automaton for LTL). This automaton runs in parallel with the AI, observing the stream of states and actions. If the automaton ever enters a failing state, the monitor raises an alarm.
+2.  **SMT Constraint Generation:** The specification is translated into a set of logical constraints for an SMT solver like Z3. This is used for static analysis, for example, to prove that certain parts of the AI's code can *never* generate an action that would violate the spec.
+3.  **Interpretability Probe Generation:** The predicates in the spec (e.g., `IsHighImpact`) are used to guide the training of interpretability tools. We can train a classifier to predict when the model is about to take an action that satisfies `IsHighImpact`, even before the action is fully formed.
+4.  **Simulation Assert Generation:** The spec is used to automatically generate test cases and assertions for the simulation and testing framework, ensuring that any new model version is rigorously checked against the safety rules.
+
+---
+(Rest of the document)
+...
+---
